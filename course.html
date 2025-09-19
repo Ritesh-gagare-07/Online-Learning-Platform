@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Course Detail</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+  <h1 id="courseTitle"></h1>
+  <p id="courseDesc"></p>
+
+  <button id="enrollBtn">Enroll</button>
+
+  <h3>Topics / Videos</h3>
+  <div id="topics"></div>
+
+  <h3>Your Progress</h3>
+  <div id="progressContainer">
+    <div id="progressBar"></div>
+  </div>
+  <p><b id="progressText">0%</b></p>
+
+  <button id="quizBtn" style="display:none;">Take Quiz</button>
+
+  <script>
+  let url = new URL(window.location.href);
+  let course_id = url.searchParams.get("course_id");
+
+  function loadCourse(){
+    $.get('api/get_course_detail.php?course_id=' + course_id, function(data){
+      $('#courseTitle').text(data.title);
+      $('#courseDesc').text(data.description);
+      let html = '';
+      data.topics.forEach(t => {
+        html += `<div>${t.position}. ${t.title} 
+          <button onclick="playVideo('${t.video_url}')">Play</button></div>`;
+      });
+      $('#topics').html(html);
+    }, 'json');
+  }
+
+  function playVideo(url){
+    $('body').append(`<video src="${url}" controls autoplay style="width:100%; max-width:600px;"></video>`);
+    // simulate progress +20%
+    currentProgress = Math.min(100, currentProgress+20);
+    updateProgress(currentProgress);
+    $.post('api/update_progress.php', { course_id: course_id, progress: currentProgress });
+  }
+
+  let currentProgress = 0;
+
+  function updateProgress(percent){
+    $('#progressBar').css('width', percent+'%');
+    $('#progressText').text(percent+'%');
+    if(percent>=80){
+      $('#quizBtn').show();
+    }
+  }
+
+  $(function(){
+    loadCourse();
+
+    $('#enrollBtn').click(function(){
+      $.post('api/enroll.php', { course_id: course_id }, function(res){
+        if(res.success) {
+          alert('Enrolled!');
+          currentProgress=0;
+          updateProgress(0);
+        }
+        else alert(res.error);
+      }, 'json');
+    });
+
+    $('#quizBtn').click(function(){
+      window.location.href = "quiz.html?course_id=" + course_id;
+    });
+  });
+  </script>
+
+  <style>
+  #progressContainer { width: 100%; background:#eee; border-radius:5px; margin-top:5px; }
+  #progressBar { width:0%; height:20px; background: linear-gradient(90deg,#4caf50,#8bc34a); border-radius:5px; transition: width 0.4s; }
+  </style>
+</body>
+</html>
